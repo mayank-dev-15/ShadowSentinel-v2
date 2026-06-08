@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShadowSentinel v2 - Network Intrusion Detection</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e17; color: #c8d6e5; min-height: 100vh; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  header { background: linear-gradient(135deg, #0f1923 0%, #1a2332 100%); padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #1e3a5f; }
+  header h1 { color: #00d2ff; font-size: 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 span { background: #e74c3c; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #111927; border: 1px solid #1e3a5f; border-radius: 10px; padding: 20px; }
+  .stat-card .label { color: #5a7a9a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-card .value { color: #e8e8e8; font-size: 28px; font-weight: 700; margin-top: 8px; }
+  .stat-card .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; margin-top: 8px; }
+  .status-badge.active { background: #00b89420; color: #00b894; border: 1px solid #00b894; }
+  .status-badge.warning { background: #fdcb6e20; color: #fdcb6e; border: 1px solid #fdcb6e; }
+  .status-badge.danger { background: #e74c3c20; color: #e74c3c; border: 1px solid #e74c3c; }
+  .panel { background: #111927; border: 1px solid #1e3a5f; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+  .panel h2 { color: #00d2ff; font-size: 16px; margin-bottom: 16px; }
+  .alert-item { padding: 12px; border-bottom: 1px solid #1a2a40; display: flex; gap: 12px; align-items: start; }
+  .alert-item:last-child { border-bottom: none; }
+  .alert-severity { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  .alert-severity.critical { background: #e74c3c; color: #fff; }
+  .alert-severity.high { background: #e67e22; color: #fff; }
+  .alert-severity.medium { background: #f39c12; color: #000; }
+  .alert-severity.low { background: #3498db; color: #fff; }
+  .alert-details { flex: 1; }
+  .alert-details .time { color: #5a7a9a; font-size: 11px; }
+  .alert-details .desc { color: #c8d6e5; font-size: 13px; margin-top: 4px; }
+  .alert-score { font-size: 14px; font-weight: 700; }
+  .alert-score.high { color: #e74c3c; }
+  .alert-score.medium { color: #f39c12; }
+  .controls { display: flex; gap: 12px; margin-bottom: 16px; }
+  .btn { padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+  .btn-primary { background: #00d2ff; color: #0a0e17; }
+  .btn-primary:hover { background: #00b8e6; }
+  .btn-danger { background: #e74c3c; color: #fff; }
+  .btn-danger:hover { background: #c0392b; }
+  .btn-secondary { background: #1e3a5f; color: #c8d6e5; }
+  .btn-secondary:hover { background: #2a4a75; }
+  .flow-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .flow-table th { text-align: left; color: #5a7a9a; padding: 8px; border-bottom: 1px solid #1e3a5f; }
+  .flow-table td { padding: 8px; border-bottom: 1px solid #0f1923; }
+  .flow-table tr:hover { background: #0f1923; }
+  .chart-container { height: 200px; background: #0a0e17; border-radius: 8px; margin-top: 16px; position: relative; overflow: hidden; }
+  .bar { position: absolute; bottom: 0; background: linear-gradient(to top, #00d2ff, #0066ff); border-radius: 2px 2px 0 0; transition: height 0.3s; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .config-grid label { color: #5a7a9a; font-size: 12px; display: block; margin-bottom: 4px; }
+  .config-grid input, .config-grid select { width: 100%; padding: 8px; background: #0a0e17; border: 1px solid #1e3a5f; border-radius: 6px; color: #c8d6e5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>ShadowSentinel <span>v2</span></h1>
+    <p style="color:#5a7a9a;margin-top:4px;font-size:13px;">ML-Powered Network Intrusion Detection System</p>
+  </header>
+
+  <div class="controls">
+    <button class="btn btn-primary" onclick="startCapture()">Start Capture</button>
+    <button class="btn btn-danger" onclick="stopCapture()">Stop</button>
+    <button class="btn btn-secondary" onclick="clearAlerts()">Clear Alerts</button>
+    <select id="interface" class="btn btn-secondary" style="padding:8px;background:#1e3a5f;border:none;color:#c8d6e5;border-radius:8px;">
+      <option value="eth0">eth0</option>
+      <option value="wlan0">wlan0</option>
+      <option value="any">any</option>
+    </select>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="label">Status</div>
+      <span class="status-badge active">Listening</span>
+    </div>
+    <div class="stat-card">
+      <div class="label">Packets Captured</div>
+      <div class="value" id="packetCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Active Flows</div>
+      <div class="value" id="flowCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Alerts</div>
+      <div class="value" id="alertCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Threat Score</div>
+      <div class="value" id="threatScore">0.0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Uptime</div>
+      <div class="value" id="uptime">00:00:00</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Live Traffic</h2>
+    <div class="chart-container" id="trafficChart"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Alerts</h2>
+    <div id="alertList">
+      <div style="color:#5a7a9a;text-align:center;padding:40px;">No alerts yet. Start capture to begin monitoring.</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <div class="panel">
+      <h2>Active Flows</h2>
+      <table class="flow-table">
+        <thead><tr><th>Src IP</th><th>Dst IP</th><th>Proto</th><th>Packets</th><th>Score</th></tr></thead>
+        <tbody id="flowTableBody">
+          <tr><td colspan="5" style="color:#5a7a9a;text-align:center;padding:20px;">No flows</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>Configuration</h2>
+      <div class="config-grid">
+        <div><label>Sensitivity</label><select id="sensitivity"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+        <div><label>Flow Timeout (s)</label><input type="number" value="60" id="flowTimeout"></div>
+        <div><label>Alert Threshold</label><input type="number" value="0.7" step="0.05" id="threshold"></div>
+        <div><label>BPF Filter</label><input type="text" value="ip" id="bpfFilter"></div>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:16px;" onclick="applyConfig()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let packetCount = 0, flowCount = 0, alertCount = 0;
+let isCapturing = false;
+let chartData = [];
+const MAX_CHART = 60;
+
+function startCapture() {
+  isCapturing = true;
+  document.querySelector('.status-badge').textContent = 'Capturing';
+  document.querySelector('.status-badge').className = 'status-badge warning';
+  simulateTraffic();
+}
+
+function stopCapture() {
+  isCapturing = false;
+  document.querySelector('.status-badge').textContent = 'Stopped';
+  document.querySelector('.status-badge').className = 'status-badge danger';
+}
+
+function clearAlerts() {
+  alertCount = 0;
+  document.getElementById('alertCount').textContent = '0';
+  document.getElementById('alertList').innerHTML = '<div style="color:#5a7a9a;text-align:center;padding:40px;">Alerts cleared.</div>';
+}
+
+function simulateTraffic() {
+  const alerts = [
+    { severity: 'critical', desc: 'Port scan detected from 10.0.0.35 (22 SYN packets in 2s)' },
+    { severity: 'high', desc: 'DNS exfiltration pattern: 10.0.0.42 -> external (128 queries/min)' },
+    { severity: 'medium', desc: 'Unusual outbound TCP/445: 192.168.1.105 -> 203.0.113.50' },
+    { severity: 'low', desc: 'SSL certificate mismatch: *.malicious.com on port 443' },
+    { severity: 'high', desc: 'Brute force login: SSH root@192.168.1.1 (15 attempts/30s)' },
+  ];
+
+  setInterval(() => {
+    if (!isCapturing) return;
+    packetCount += Math.floor(Math.random() * 50) + 10;
+    flowCount = Math.floor(Math.random() * 200) + 50;
+    document.getElementById('packetCount').textContent = packetCount.toLocaleString();
+    document.getElementById('flowCount').textContent = flowCount;
+
+    chartData.push(packetCount);
+    if (chartData.length > MAX_CHART) chartData.shift();
+    renderChart();
+
+    document.getElementById('threatScore').textContent = (Math.random() * 0.8 + 0.1).toFixed(2);
+
+    if (Math.random() > 0.7) {
+      const alert = alerts[Math.floor(Math.random() * alerts.length)];
+      addAlert(alert.severity, alert.desc, Math.random() * 0.5 + 0.5);
+    }
+  }, 2000);
+
+  let seconds = 0;
+  setInterval(() => {
+    if (!isCapturing) return;
+    seconds++;
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    document.getElementById('uptime').textContent = `${h}:${m}:${s}`;
+  }, 1000);
+}
+
+function addAlert(severity, desc, score) {
+  alertCount++;
+  document.getElementById('alertCount').textContent = alertCount;
+  const list = document.getElementById('alertList');
+  const div = document.createElement('div');
+  div.className = 'alert-item';
+  div.innerHTML = `<span class="alert-severity ${severity}">${severity}</span>
+    <div class="alert-details">
+      <div class="time">${new Date().toLocaleTimeString()}</div>
+      <div class="desc">${desc}</div>
+    </div>
+    <div class="alert-score ${severity === 'critical' || severity === 'high' ? 'high' : 'medium'}">${score.toFixed(2)}</div>`;
+  list.prepend(div);
+  if (list.children.length > 50) list.lastChild.remove();
+}
+
+function renderChart() {
+  const chart = document.getElementById('trafficChart');
+  if (!chartData.length) return;
+  const max = Math.max(...chartData);
+  const barWidth = (chart.offsetWidth - 20) / MAX_CHART;
+  chart.innerHTML = chartData.map((v, i) =>
+    `<div class="bar" style="left:${i * barWidth + 10}px;width:${Math.max(barWidth - 2, 2)}px;height:${(v / max) * 180}px;"></div>`
+  ).join('');
+}
+
+function applyConfig() {
+  const sensitivity = document.getElementById('sensitivity').value;
+  const flowTimeout = document.getElementById('flowTimeout').value;
+  const threshold = document.getElementById('threshold').value;
+  const bpf = document.getElementById('bpfFilter').value;
+  console.log('Config applied:', { sensitivity, flowTimeout, threshold, bpf });
+}
+
+simulateTraffic();
+</script>
+</body>
+</html>
