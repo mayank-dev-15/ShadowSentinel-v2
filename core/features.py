@@ -109,6 +109,7 @@ class FeatureExtractor:
             )
 
         flow = self.flows[canon]
+        iat = now - flow.last_time
         flow.last_time = now
         flow.duration = now - flow.start_time
 
@@ -118,14 +119,14 @@ class FeatureExtractor:
             flow.fwd_payload_bytes += pkt.payload_len
             flow.fwd_packet_lengths.append(pkt.length)
             if len(flow.fwd_packet_lengths) > 1:
-                flow.fwd_iat.append(now - flow.last_time)
+                flow.fwd_iat.append(iat)
         else:
             flow.bwd_packets += 1
             flow.bwd_bytes += pkt.length
             flow.bwd_payload_bytes += pkt.payload_len
             flow.bwd_packet_lengths.append(pkt.length)
             if len(flow.bwd_packet_lengths) > 1:
-                flow.bwd_iat.append(now - flow.last_time)
+                flow.bwd_iat.append(iat)
 
         if pkt.protocol == 6:
             f = pkt.flags
